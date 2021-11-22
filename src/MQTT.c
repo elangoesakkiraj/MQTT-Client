@@ -6,8 +6,6 @@
 #include <json-c/json.h>
 #include "MQTTClient.h"
 
-#define TOPIC       "MQTT Examples"
-#define QOS         1
 #define TIMEOUT     10000L
 #define MAX_LEN 256
 #define CONFIG_LINE_BUFFER_SIZE 100
@@ -20,6 +18,12 @@ time_t t;
 struct config_struct
 {
   char ADDRESS[MAX_LEN];  
+  char security[MAX_CONFIG_VARIABLE_LEN];
+  char username[MAX_CONFIG_VARIABLE_LEN];
+  char password[MAX_CONFIG_VARIABLE_LEN];
+  char will_opts[MAX_CONFIG_VARIABLE_LEN];
+  char will_topic[MAX_CONFIG_VARIABLE_LEN];
+  char will_message[MAX_LEN];
 }config;
 
 
@@ -73,7 +77,7 @@ int mqtt_subscribe(MQTTClient client)
 {
     char topic[30] = "mqtt-topic";
     int qos = 0;
-    printf("enter the subscribe by - topic qos\n");
+    printf("enter the subscriber -- < topic > < qos > : ");
     scanf("%s",topic);
     scanf("%d",&qos);
     int rc = MQTTClient_subscribe(client, topic, qos);
@@ -84,7 +88,7 @@ const char* payload_generator()
 {
     json_object * jobj = json_object_new_object();
 
-    json_object *jstring = json_object_new_string("payload contain random and timestamp");
+    //json_object *jstring = json_object_new_string("payload contain random and timestamp");
 
     time(&t);
 
@@ -94,7 +98,7 @@ const char* payload_generator()
 
     json_object *jint1 = json_object_new_int(rand());
 
-    json_object_object_add(jobj,"Init", jstring);
+    //json_object_object_add(jobj,"Init", jstring);
 
     json_object_object_add(jobj,"Current Local Time", jstring1);
 
@@ -109,21 +113,39 @@ void mqtt_connection(struct config_struct config) {
 
     MQTTClient client;
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
+    MQTTClient_willOptions will_opts = MQTTClient_willOptions_initializer;
     MQTTClient_message pubmsg = MQTTClient_message_initializer;
     MQTTClient_deliveryToken token;
     int rc,ch;
-    char CLIENTID[MAX_LEN];
+    int clean_session,keepalive,publish_qos;
+    char CLIENTID[MAX_LEN],publish_topic[MAX_LEN];
     char get_sub[20];
     const char *PAYLOAD;
 
     //printf("ADD %s\n",config.ADDRESS);
-    printf("Enter the client id: ");
+    printf("Enter -- < clientid > < cleansession > < keepalive >: ");
     scanf("%s",CLIENTID);
+    scanf("%d",&clean_session);
+    scanf("%d",&keepalive);
 
     MQTTClient_create(&client,config.ADDRESS, CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    //printf("%d %d\n",clean_session,keepalive);
+    conn_opts.keepAliveInterval = keepalive;
+    conn_opts.cleansession = clean_session;
 
-    conn_opts.keepAliveInterval = 20;
-    conn_opts.cleansession = 1;
+    if((strcmp(config.security,"enable")==0)||(strcmp(config.security,"ENABLE")==0))
+    {
+        conn_opts.username = config.username;
+        conn_opts.password = config.password;
+    }
+
+    if((strcmp(config.will_opts,"enable")==0)||(strcmp(config.will_opts,"ENABLE")==0))
+    {
+        conn_opts.will = &will_opts;
+        will_opts.topicName = config.will_topic;
+        will_opts.message = config.will_message;
+    }
+
 
     MQTTClient_setCallbacks(client, NULL, connlost, messageArrived, deliveryComplete);
 
@@ -133,7 +155,7 @@ void mqtt_connection(struct config_struct config) {
         exit(-1);
     }
     
-    printf("do you want to subscribe topic ? (y/n) -");
+    printf("do you want to subscribe topic ? (y/n)  ");
     scanf("%s",get_sub);
 
     if((strcmp(get_sub,"y")==0)||(strcmp(get_sub,"Y")==0))
@@ -146,24 +168,25 @@ void mqtt_connection(struct config_struct config) {
         // MQTTClient_subscribe(client, topic, qos);
     }
     
-
+    printf("Enter -- < publish_topic > < publish_qos > : ");
+    scanf("%s",publish_topic);
+    scanf("%d",&publish_qos);
     PAYLOAD = payload_generator();
 
     pubmsg.payload = PAYLOAD;
     pubmsg.payloadlen = strlen(PAYLOAD);
-    pubmsg.qos = QOS;
+    pubmsg.qos = publish_qos;
     pubmsg.retained = 0;
 
-    MQTTClient_publishMessage(client, TOPIC, &pubmsg, &token);
+    MQTTClient_publishMessage(client, publish_topic, &pubmsg, &token);
 
-    printf("Waiting for up to %d seconds for publication of %s\n"
-            "on topic %s for client with ClientID: %s\n",
-            (int)(TIMEOUT/1000), PAYLOAD, TOPIC, CLIENTID);
+    //printf("Waiting for up to %d seconds for publication of %s\n""on topic %s for client with ClientID: %s\n",(int)(TIMEOUT/1000), PAYLOAD, publish_topic, CLIENTID);
 
     rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
 
     printf("Message with delivery token %d delivered\n", token);
     //sleep(30);
+    printf("press Q or q to disconnect the client\n");
     do
     {
         ch = getchar();
@@ -192,6 +215,31 @@ void read_config_file(char* config_filename, struct config_struct config) {
             read_str_from_config_line(buf, config.ADDRESS);
             //printf("config.add %s\n",config.ADDRESS);
         }
+        if (strstr(buf, "security")) {
+            read_str_from_config_line(buf, config.security);
+            //printf("config.security %s\n",config.security);
+        }
+        if (strstr(buf, "username")) {
+            read_str_from_config_line(buf, config.username);
+            //printf("config.username %s\n",config.username);
+        }
+        if (strstr(buf, "password")) {
+            read_str_from_config_line(buf, config.password);
+            //printf("config.username %s\n",config.password);
+        }
+        if (strstr(buf, "will_option")) {
+            read_str_from_config_line(buf, config.will_opts);
+            //printf("config.will_opts %s\n",config.will_opts);
+        }
+        if (strstr(buf, "will_topic")) {
+            read_str_from_config_line(buf, config.will_topic);
+            //printf("config.will_topic %s\n",config.will_topic);
+        }
+        if (strstr(buf, "will_payload")) {
+            read_str_from_config_line(buf, config.will_message);
+            //printf("config.will_msg %s\n",config.will_message);
+        }
+
     }
     fclose(fp);
 
