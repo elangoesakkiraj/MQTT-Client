@@ -39,6 +39,7 @@ void read_str_from_config_line(char* config_line, char* val) {
 
 int main(int argc, char* argv[])
 {
+    printf("MQTT Client Version 3.1.1 protocol support client...\n");
     read_config_file("../conf/client.conf", config);
     return EXIT_SUCCESS;
 }
@@ -77,7 +78,7 @@ int mqtt_subscribe(MQTTClient client)
 {
     char topic[30] = "mqtt-topic";
     int qos = 0;
-    printf("enter the subscriber -- < topic > < qos > : ");
+    printf("enter the subscriber -- < topic > < qos (0/1/2)> : ");
     scanf("%s",topic);
     scanf("%d",&qos);
     int rc = MQTTClient_subscribe(client, topic, qos);
@@ -117,13 +118,13 @@ void mqtt_connection(struct config_struct config) {
     MQTTClient_message pubmsg = MQTTClient_message_initializer;
     MQTTClient_deliveryToken token;
     int rc,ch;
-    int clean_session,keepalive,publish_qos;
+    int clean_session,keepalive,publish_qos,publish_retain;
     char CLIENTID[MAX_LEN],publish_topic[MAX_LEN];
     char get_sub[20];
     const char *PAYLOAD;
 
     //printf("ADD %s\n",config.ADDRESS);
-    printf("Enter -- < clientid > < cleansession > < keepalive >: ");
+    printf("Enter -- < clientid > < cleansession (0/1)> < keepalive >: ");
     scanf("%s",CLIENTID);
     scanf("%d",&clean_session);
     scanf("%d",&keepalive);
@@ -168,31 +169,68 @@ void mqtt_connection(struct config_struct config) {
         // MQTTClient_subscribe(client, topic, qos);
     }
     
-    printf("Enter -- < publish_topic > < publish_qos > : ");
+    printf("Enter -- < publish_topic > < publish_qos (0/1/2)> < publish_retain (0/1)> : ");
     scanf("%s",publish_topic);
     scanf("%d",&publish_qos);
-    PAYLOAD = payload_generator();
-
-    pubmsg.payload = PAYLOAD;
-    pubmsg.payloadlen = strlen(PAYLOAD);
-    pubmsg.qos = publish_qos;
-    pubmsg.retained = 0;
-
-    MQTTClient_publishMessage(client, publish_topic, &pubmsg, &token);
-
-    //printf("Waiting for up to %d seconds for publication of %s\n""on topic %s for client with ClientID: %s\n",(int)(TIMEOUT/1000), PAYLOAD, publish_topic, CLIENTID);
-
-    rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
-
-    printf("Message with delivery token %d delivered\n", token);
-    //sleep(30);
-    printf("press Q or q to disconnect the client\n");
-    do
-    {
+    scanf("%d",&publish_retain);
+    int flag=0;
+    while(1)
+    {   
+        printf("Enter <d> to Disconnect the client or <p> to publish the message\n");
         ch = getchar();
-    } while(ch!='Q' && ch != 'q');
-    MQTTClient_disconnect(client, 10000);
-    MQTTClient_destroy(&client);
+        //printf("################### %c\n",ch);
+        switch (ch)
+        {
+            case 'd':
+                MQTTClient_disconnect(client, 100);
+                MQTTClient_destroy(&client);
+                flag=1;
+                break;
+            case 'p':
+                PAYLOAD = payload_generator();
+
+                pubmsg.payload = PAYLOAD;
+                pubmsg.payloadlen = strlen(PAYLOAD);
+                pubmsg.qos = publish_qos;
+                pubmsg.retained = publish_retain;
+
+                MQTTClient_publishMessage(client, publish_topic, &pubmsg, &token);
+
+                //printf("Waiting for up to %d seconds for publication of %s\n""on topic %s for client with ClientID: %s\n",(int)(TIMEOUT/1000), PAYLOAD, publish_topic, CLIENTID);
+
+                rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
+
+                printf("Message with delivery token %d delivered\n", token);
+                break;
+
+        }
+        sleep(2);
+        if(flag==1)
+            break;
+
+    }
+    // PAYLOAD = payload_generator();
+
+    // pubmsg.payload = PAYLOAD;
+    // pubmsg.payloadlen = strlen(PAYLOAD);
+    // pubmsg.qos = publish_qos;
+    // pubmsg.retained = 0;
+
+    // MQTTClient_publishMessage(client, publish_topic, &pubmsg, &token);
+
+    // //printf("Waiting for up to %d seconds for publication of %s\n""on topic %s for client with ClientID: %s\n",(int)(TIMEOUT/1000), PAYLOAD, publish_topic, CLIENTID);
+
+    // rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
+
+    // printf("Message with delivery token %d delivered\n", token);
+    // //sleep(30);
+    // printf("press Q or q to disconnect the client\n");
+    // do
+    // {
+    //     ch = getchar();
+    // } while(ch!='Q' && ch != 'q');
+    // MQTTClient_disconnect(client, 10000);
+    // MQTTClient_destroy(&client);
     //return rc;
 
 }
