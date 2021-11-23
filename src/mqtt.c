@@ -1,44 +1,8 @@
-// gcc -Wall MQTT_C.c -o client -lpaho-mqtt3c
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <json-c/json.h>
-#include "MQTTClient.h"
-
-#define TIMEOUT     10000L
-#define MAX_LEN 256
-#define CONFIG_LINE_BUFFER_SIZE 100
-#define MAX_CONFIG_VARIABLE_LEN 20
-
-volatile MQTTClient_deliveryToken deliveredtoken;
-
-time_t t;
-
-struct config_struct
-{
-  char ADDRESS[MAX_LEN];  
-  char security[MAX_CONFIG_VARIABLE_LEN];
-  char username[MAX_CONFIG_VARIABLE_LEN];
-  char password[MAX_CONFIG_VARIABLE_LEN];
-  char will_opts[MAX_CONFIG_VARIABLE_LEN];
-  char will_topic[MAX_CONFIG_VARIABLE_LEN];
-  char will_message[MAX_LEN];
-}config;
-
-
-void read_config_file(char* config_filename, struct config_struct config);
-
-
-void read_str_from_config_line(char* config_line, char* val) {   
-    //printf("param %s %s\n",config_line,val); 
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    sscanf(config_line, "%s %s\n", prm_name, val);
-}
-
+#include "mqtt_utils.h"
 
 int main(int argc, char* argv[])
 {
+    struct config_struct config;
     printf("MQTT Client Version 3.1.1 protocol support client...\n");
     read_config_file("../conf/client.conf", config);
     return EXIT_SUCCESS;
@@ -85,30 +49,6 @@ int mqtt_subscribe(MQTTClient client)
     return rc;
 }
 
-const char* payload_generator()
-{
-    json_object * jobj = json_object_new_object();
-
-    //json_object *jstring = json_object_new_string("payload contain random and timestamp");
-
-    time(&t);
-
-    json_object *jstring1 = json_object_new_string(ctime(&t));
-
-    json_object *jint = json_object_new_int((int)time(NULL));
-
-    json_object *jint1 = json_object_new_int(rand());
-
-    //json_object_object_add(jobj,"Init", jstring);
-
-    json_object_object_add(jobj,"Current Local Time", jstring1);
-
-    json_object_object_add(jobj,"timestamp", jint);
-
-    json_object_object_add(jobj,"Random Number", jint1);
-
-    return json_object_to_json_string(jobj);
-}
 
 void mqtt_connection(struct config_struct config) {
 
@@ -188,7 +128,6 @@ void mqtt_connection(struct config_struct config) {
                 break;
             case 'p':
                 PAYLOAD = payload_generator();
-
                 pubmsg.payload = PAYLOAD;
                 pubmsg.payloadlen = strlen(PAYLOAD);
                 pubmsg.qos = publish_qos;
@@ -209,77 +148,6 @@ void mqtt_connection(struct config_struct config) {
             break;
 
     }
-    // PAYLOAD = payload_generator();
-
-    // pubmsg.payload = PAYLOAD;
-    // pubmsg.payloadlen = strlen(PAYLOAD);
-    // pubmsg.qos = publish_qos;
-    // pubmsg.retained = 0;
-
-    // MQTTClient_publishMessage(client, publish_topic, &pubmsg, &token);
-
-    // //printf("Waiting for up to %d seconds for publication of %s\n""on topic %s for client with ClientID: %s\n",(int)(TIMEOUT/1000), PAYLOAD, publish_topic, CLIENTID);
-
-    // rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
-
-    // printf("Message with delivery token %d delivered\n", token);
-    // //sleep(30);
-    // printf("press Q or q to disconnect the client\n");
-    // do
-    // {
-    //     ch = getchar();
-    // } while(ch!='Q' && ch != 'q');
-    // MQTTClient_disconnect(client, 10000);
-    // MQTTClient_destroy(&client);
-    //return rc;
 
 }
 
-void read_config_file(char* config_filename, struct config_struct config) {
-    FILE *fp;
-    char buf[CONFIG_LINE_BUFFER_SIZE];
-
-    if ((fp=fopen(config_filename, "r")) == NULL) {
-        fprintf(stderr, "Failed to open config file %s", config_filename);
-        exit(EXIT_FAILURE);
-    }
-    while(! feof(fp)) {
-        fgets(buf, CONFIG_LINE_BUFFER_SIZE, fp);
-        //printf("buffer %s\n",buf);
-        if (buf[0] == '#' || strlen(buf) < 4) {
-            continue;
-        }
-        if (strstr(buf, "host")) {
-            read_str_from_config_line(buf, config.ADDRESS);
-            //printf("config.add %s\n",config.ADDRESS);
-        }
-        if (strstr(buf, "security")) {
-            read_str_from_config_line(buf, config.security);
-            //printf("config.security %s\n",config.security);
-        }
-        if (strstr(buf, "username")) {
-            read_str_from_config_line(buf, config.username);
-            //printf("config.username %s\n",config.username);
-        }
-        if (strstr(buf, "password")) {
-            read_str_from_config_line(buf, config.password);
-            //printf("config.username %s\n",config.password);
-        }
-        if (strstr(buf, "will_option")) {
-            read_str_from_config_line(buf, config.will_opts);
-            //printf("config.will_opts %s\n",config.will_opts);
-        }
-        if (strstr(buf, "will_topic")) {
-            read_str_from_config_line(buf, config.will_topic);
-            //printf("config.will_topic %s\n",config.will_topic);
-        }
-        if (strstr(buf, "will_payload")) {
-            read_str_from_config_line(buf, config.will_message);
-            //printf("config.will_msg %s\n",config.will_message);
-        }
-
-    }
-    fclose(fp);
-
-    mqtt_connection(config);
-}
