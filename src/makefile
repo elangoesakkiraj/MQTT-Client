@@ -7,7 +7,7 @@ create : client_binary
 
 client_binary:json_binary
 
-	$(CC) -Wall MQTT.c -o client  json_payload.o config.o -lpaho-mqtt3c  -ljson-c
+	$(CC) -Wall mqtt.c -o client  json_payload.o config.o -lpaho-mqtt3c  -ljson-c
 
 json_binary:config_binary
 
