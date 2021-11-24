@@ -14,8 +14,10 @@ build_creation:client_binary
 	mkdir ../mqttclient/log
 	mkdir ../mqttclient/lib	
 	mkdir ../mqttclient/bin
-	cp ../conf/* ../mqttclient/
-	cp client ../mqttclient/
+	cp ../bin/* ../mqttclient/bin/
+	cp ../conf/* ../mqttclient/conf/
+	cp client ../mqttclient/lib/
+	rm -rf client json_payload.o config.o log_utils.o
 	@echo --------------------------------------------------
 	@echo " 	zip compressed... "
 	@echo --------------------------------------------------
