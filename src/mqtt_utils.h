@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
+#include "log_utils.h"
 #include "MQTTClient.h"  // paho-mqtt library
 #include <json-c/json.h> // json library
 
@@ -13,6 +15,8 @@
 volatile MQTTClient_deliveryToken deliveredtoken;
 
 time_t t;
+
+int log_level;
 
 // config file params
 
@@ -31,6 +35,8 @@ struct config_struct
 void read_config_file(char* config_filename, struct config_struct config);
 
 void read_str_from_config_line(char* config_line, char* val);
+
+int read_int_from_config_line(char* config_line);
 
 
 // mqtt connection start here.
