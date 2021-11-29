@@ -4,7 +4,7 @@ echo "Test 1) will connect"
 echo "Test 2) duplicate connect"
 echo "Test 3) SYS/#  topic"
 echo "Test 4) # topic subscribe"
-echo "Test 5) "
+echo "Test 5) pub and sub"
 
 read a
 
@@ -36,7 +36,11 @@ case $a in
 		echo "* it will receives the every messages from broker .whatever message receives broker from all client, include $SYS topic."
 		echo "* it will sents to # subscriber client";;
 	5 ) 
-		echo "";;
+		echo "########################################################################################################################"
+		echo "pub and sub"
+		echo "* connect the <path/bin/mqtt-client-1.sh client and subscribe to (test-topic) topic."
+		echo "* same client publish with subscribed topic (test-topic)."
+		echo "* the client mqtt-client-1 published message recevied by itself.";;
 	*) 
 		echo "default"
 esac
@@ -89,6 +93,17 @@ control_c() {
 			else
 				echo "################################################"
 				echo "# topic subscribe Test fail"
+			fi
+			echo "Test completed...";;
+		5) 
+			echo "test case 5:"
+			filecheck=$(cat ../log/client.log | grep -c "topic: test-topic")
+			if [ $filecheck -gt 0 ]; then
+				echo "################################################"
+				echo "pub and sub sucessfully test pass"
+			else
+				echo "################################################"
+				echo "pub and sub Test fail"
 			fi
 			echo "Test completed...";;
 
