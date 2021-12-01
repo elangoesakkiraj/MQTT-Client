@@ -19,7 +19,9 @@ MQTT Client Using Eclipse Paho Library
 
 	# for json lib dependency
 
-	sudo apt install libjson-c-dev 
+	sudo apt install libjson-c-dev 			# for Linux
+	
+	brew install json-c			        # for mac
 
 # Build 
 
